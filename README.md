@@ -1,27 +1,15 @@
-# Redis Clone (C++)
+# Redis Clone (C++) 
 
->**Oneliner:**
+>**Oneliner:** In-memory database solving c10k requset problem using RESP protocol for client-server interaction
 
 ## Implementation Status
 
 ### Core Architecture
 - [x] **TCP Server**
-- [x] **Parser Integration**: 
-    - [x] RESP2 Compliance (Array/Bulk String focus)
-    - [ ] ~~RESP3 Compliance~~ *(Deferred)*
-- [ ] **Concurrency Control**: Threading model pending
+- [x] **Parser Integration**
+- [x] **Command Design Pattern:** Modular desgin for command dispatch
+- [ ] **Concurrency Control**: Poll implmentation (solving the c10k problem)
 - [ ] **Pipelining**: Request batching
-
-### Data Types and Commands
-- [x] **PING/PONG**
-- [ ] **Strings**: Basic `GET`/`SET` (Partial)
-- [ ] **Hashes**: `HGET`/`HSET` (Partial)
-- [ ] **Lists**: `LPUSH`/`LPOP` (Partial)
-- [ ] **DEL**
-- [ ] **FlushALL**
-
-### Performance & Reliability
-- [ ] **Benchmarking**: Latency/Throughput testing
 
 ## Build and Run
 
@@ -37,11 +25,12 @@ This project uses a **Makefile** to automate the **Docker** container lifecycle
 Compiles the C++ source and builds the Docker image
 ```bash
 make build
-
 ```
 
 **2. Run the Server:** Starts the container and binds the port (default: 6379)
 ```
 make run
 ```
+
+**3. Test the RESP commands:** You do by editing the clien_test.py in seperate terminal
 

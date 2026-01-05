@@ -1,20 +1,16 @@
-#include "parser.hpp"
-#include <string>
-#include <vector>
+#include "util/parser.hpp"
 #include <iostream>
-#include <cstring>
+#include <string>
 
 std::vector<std::string> parse_resp(const char* buffer, int length) {
     std::vector<std::string> content;
-    size_t pos = 0; // store theoretically size of any type, depending on computer bit limit (32 or 64)
-
+    size_t pos = 0; 
     std::string raw(buffer, length);
 
-    
     if (raw[pos] != '*') return {}; 
 
     size_t line_end = raw.find("\r\n", pos);
-    if (line_end == -1) return {}; // Incomplete
+    if (line_end == -1) return {}; 
 
     int num_elements = std::stoi(raw.substr(pos + 1, line_end - 1 - pos));
     
@@ -31,7 +27,7 @@ std::vector<std::string> parse_resp(const char* buffer, int length) {
         std::string payload = raw.substr(pos, str_len);
         content.push_back(payload);
 
-        pos += str_len + 2; //Skip trailing \r\n
+        pos += str_len + 2;
    
     }
 

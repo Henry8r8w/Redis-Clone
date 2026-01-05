@@ -4,8 +4,13 @@
 #include <cstring>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <algorithm>
 #include <netinet/in.h>
-#include "parser.hpp"
+#include "util/parser.hpp"
+#include "receiver.hpp"
+#include "invoker.hpp"
+#include "concrete-commands/set.hpp"
+#include "concrete-commands/get.hpp"
 
 
 int main() {
@@ -32,6 +37,11 @@ int main() {
     listen(server_fd, 5);
     std::cout << "Redis Server listening on 6379...\n";
 
+    // Command dispatch setup
+    Receiver receiver;
+    Invoker invoker;
+
+    // Event-loop
     while (true) {
         struct sockaddr_in client_addr;
         socklen_t client_len = sizeof(client_addr);
@@ -47,7 +57,7 @@ int main() {
         while (true) {
             memset(buffer, 0, sizeof(buffer));
             int bytes_read = read(client_fd, buffer, sizeof(buffer));
-
+  
             std::vector<std::string> parts = parse_resp(buffer, bytes_read);
 
             if (parts.empty()){
@@ -55,18 +65,40 @@ int main() {
             } 
       
             for(int i = 0; i< parts.size(); i++){
-                std::cout << parts[i] << std::endl; // debug
+                std::cout << parts[i] << std::endl; 
             }
-            std::string command = parts[0];
-            std::string response;
-            
-            if (command == "PING") {
-                response = "+PONG\r\n";
+
+            std::string commandName = parts[0];
+            std::unique_ptr<Command> cmd = nullptr;
+
+            if (commandName == "SET") {
+                cmd = std::make_unique<SetCommand>(receiver, parts[1], parts[2]);
+                invoker.addCommand(std::move(cmd));
+                invoker.executeAll();
+
+                write(client_fd, "+OK\r\n", 5); 
+            } 
+            else if (commandName == "GET") {
+                auto getCmd = std::make_unique<GetCommand>(receiver, parts[1]);
+                GetCommand* ptr = getCmd.get(); // Keep a raw pointer to grab the result later
+                
+                invoker.addCommand(std::move(getCmd));
+                invoker.executeAll();
+
+                RedisData result = ptr->getResult();
+                if (std::holds_alternative<std::string>(result)) {
+                    std::string val = std::get<std::string>(result);
+                    std::string resp = "$" + std::to_string(val.length()) + "\r\n" + val + "\r\n";
+                    write(client_fd, resp.c_str(), resp.size());
+                } else {
+                    write(client_fd, "$-1\r\n", 5);
+                }
             }
-            else {
-                response = "-ERR unknown command\r\n";
+            else if (commandName == "PING") {
+                write(client_fd, "+PONG\r\n", 7);
             }
-            write(client_fd, response.c_str(), response.size());
+
+           
         }
         close(client_fd);
         std::cout << "Client disconnected\n";
