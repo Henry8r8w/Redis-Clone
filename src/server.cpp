@@ -41,50 +41,67 @@ int main() {
     Receiver receiver;
     Invoker invoker;
 
-    // Event-loop
+    // Event-loop: Accept clients
     while (true) {
         struct sockaddr_in client_addr;
         socklen_t client_len = sizeof(client_addr);
         int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
         
-       if (client_fd < 0) {
+        if (client_fd < 0) {
             continue;
         }
-
+        
         std::cout << "Client connected\n";
+        
 
-        char buffer[1024];
+        std::string accumulated_buffer;
+        char temp[1024];
+        
+        // Inner loop: Handle this client's requests
         while (true) {
-            memset(buffer, 0, sizeof(buffer));
-            int bytes_read = read(client_fd, buffer, sizeof(buffer));
-  
-            std::vector<std::string> parts = parse_resp(buffer, bytes_read);
+            memset(temp, 0, sizeof(temp));
+            int bytes_read = read(client_fd, temp, sizeof(temp));
+            
+            if (bytes_read <= 0) {
+                break;  // Client disconnected
+            }
+            
+            // Accumulate data
+            accumulated_buffer.append(temp, bytes_read);
+            
+            // Try to parse
+            std::vector<std::string> parts = parse_resp(
+                accumulated_buffer.c_str(), 
+                accumulated_buffer.length()
+            );
 
+                      
             if (parts.empty()){
-                continue; 
+                continue;  // Incomplete message, need more data
+                
             } 
-      
+        
             for(int i = 0; i< parts.size(); i++){
                 std::cout << parts[i] << std::endl; 
             }
-
+            
             std::string commandName = parts[0];
             std::unique_ptr<Command> cmd = nullptr;
-
+            
             if (commandName == "SET") {
+                if (parts.size() < 3) continue; 
                 cmd = std::make_unique<SetCommand>(receiver, parts[1], parts[2]);
                 invoker.addCommand(std::move(cmd));
                 invoker.executeAll();
-
                 write(client_fd, "+OK\r\n", 5); 
             } 
             else if (commandName == "GET") {
+                if (parts.size() < 2) continue; 
                 auto getCmd = std::make_unique<GetCommand>(receiver, parts[1]);
-                GetCommand* ptr = getCmd.get(); // Keep a raw pointer to grab the result later
+                GetCommand* ptr = getCmd.get();
                 
                 invoker.addCommand(std::move(getCmd));
                 invoker.executeAll();
-
                 RedisData result = ptr->getResult();
                 if (std::holds_alternative<std::string>(result)) {
                     std::string val = std::get<std::string>(result);
@@ -97,9 +114,11 @@ int main() {
             else if (commandName == "PING") {
                 write(client_fd, "+PONG\r\n", 7);
             }
-
-           
+            
+            // Clear buffer after processing
+            accumulated_buffer.clear();
         }
+        
         close(client_fd);
         std::cout << "Client disconnected\n";
     }
