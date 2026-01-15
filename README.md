@@ -8,7 +8,7 @@
 - [x] **TCP Server**
 - [x] **Parser Integration**
 - [x] **Command Design Pattern:** Modular desgin for command dispatch
-- [ ] **Concurrency Control**: Poll implmentation (solving the c10k problem)
+- [x] **Concurrency Control**: Poll implmentation (solving the c10k problem)
 - [ ] **Pipelining**: Request batching
 
 ## Build and Run
