@@ -1,6 +1,6 @@
 # Redis Clone (C++) 
 
->**Oneliner:** In-memory database solving c10k requset problem using RESP protocol for client-server interaction
+>**Oneliner:** In-memory database solving c10k requset problem using RESP protocol for client-server interaction. Achieved throughput at 6k ops/sec for 10 concurrent clients (1/15/2026).
 
 ## Implementation Status
 
@@ -32,5 +32,5 @@ make build
 make run
 ```
 
-**3. Test the RESP commands:** You do by editing the clien_test.py in seperate terminal
+**3. Test the RESP commands:** You do by editing the client_test.py and test in seperate terminal
 
