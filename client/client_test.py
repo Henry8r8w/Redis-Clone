@@ -21,15 +21,26 @@ def send_cmd(client, *args):
         buf += f"${len(arg)}\r\n{arg}\r\n"
     client.sendall(buf.encode('utf-8'))
 
-def set(client):
-    send_cmd(client, "SET", "name", "Henry")
-    data = client.recv(1024)
-    return data
-
-def get(client):
-    send_cmd(client, "GET", "name")
-    data = client.recv(1024)
-    return data
+def set_get(client, ops_per_client):
+    client = get_client()  # NEW socket per thread
+    if not client:
+        return
+    try:
+        for i in range(ops_per_client):
+            send_cmd(client, "SET", "name", "Henry")
+            data1 = client.recv(1024)
+            send_cmd(client, "GET", "name")
+            data2 = client.recv(1024)
+            if i % 100 == 0:
+                 print(f"SET response: {data1}")
+                 print(f"GET response: {data2}") 
+            if b"Henry" not in data2:
+                print(f"Client {client} unexpected response: {data2}")
+    except Exception as e:
+        print(f"Client:{client} | Error: {e}")
+    
+    client.close()
+    return data2
 
 def ping(client, ops_per_client):
     client = get_client()  # NEW socket per thread
@@ -39,11 +50,14 @@ def ping(client, ops_per_client):
         for i in range(ops_per_client):
             client.sendall(b"*1\r\n$4\r\nPING\r\n")
             data = client.recv(1024)
+            if i % 100 == 0:
+                print(data)
             if b"+PONG" not in data:
                 print(f"Client {client} unexpected response: {data}")
+                break
     except Exception as e:
         print(f"Client:{client} | Error: {e}")
-    
+        
     client.close()
     return data
 
@@ -58,7 +72,7 @@ if __name__ == "__main__":
     
     threads = []
     for i in range(NUM_CLIENTS):
-        t = threading.Thread(target=ping, args=(i, OP_PER_CLIENT))
+        t = threading.Thread(target=set_get, args=(i, OP_PER_CLIENT)) # args=(i, OP_PER_CLIENT)
         threads.append(t)
         t.start()
     for t in threads:

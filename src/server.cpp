@@ -54,10 +54,11 @@ int main() {
 
     // Epoll instance
     int epoll_fd = epoll_create1(0);
-    struct epoll_event ev;
+    struct epoll_event events[MAX_EVENTS]; // event array
+    struct epoll_event ev; // single event element
+
     ev.events = EPOLLIN;
     ev.data.fd = server_fd;
-
     epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev); // Watch for server's incoming event
     
     // Store accumulated buffer per client
@@ -65,6 +66,7 @@ int main() {
 
     // Event loop
     while (true) {
+
         int numEvents = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
         
         for (int i = 0; i < numEvents; i++) {
@@ -117,17 +119,18 @@ int main() {
                             write(fd, "+PONG\r\n", 7);
                         }
                         else if (commandName == "SET" && parts.size() >= 3) {
-                            auto cmd = std::make_unique<SetCommand>(receiver, parts[1], parts[2]);
-                            invoker.addCommand(std::move(cmd));
-                            invoker.executeAll();
+                            //auto cmd = std::make_unique<SetCommand>(receiver, parts[1], parts[2]);
+                            //invoker.addCommand(std::move(cmd));
+                            //invoker.executeAll();
+                            receiver.update(parts[1], parts[2]);
                             write(fd, "+OK\r\n", 5);
                         }
                         else if (commandName == "GET" && parts.size() >= 2) {
-                            auto getCmd = std::make_unique<GetCommand>(receiver, parts[1]);
-                            GetCommand* ptr = getCmd.get();
-                            invoker.addCommand(std::move(getCmd));
-                            invoker.executeAll();
-                            RedisData result = ptr->getResult();
+                           // auto getCmd = std::make_unique<GetCommand>(receiver, parts[1]);
+                            // GetCommand* ptr = getCmd.get();
+                            // invoker.addCommand(std::move(getCmd));
+                            // invoker.executeAll();
+                            RedisData result = receiver.read(parts[1]);
                             if (std::holds_alternative<std::string>(result)) {
                                 std::string val = std::get<std::string>(result);
                                 std::string resp = "$" + std::to_string(val.length()) + "\r\n" + val + "\r\n";
